@@ -59,7 +59,7 @@ def run():
     
     # Chama o modelo GRATUITO
     response = client.chat.completions.create(
-        model="qwen/qwen-2.5-7b-instruct:free",
+        model="qwen/qwen-2.5-7b-instruct",
         messages=[
             {"role": "system", "content": PROMPT},
             {"role": "user", "content": f"Analise:\n{data}"}
