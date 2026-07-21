@@ -37,7 +37,7 @@ FORMATO DE SAÍDA OBRIGATÓRIO:
 """
 
 def run():
-    ticker = yf.Ticker("GC=F")
+    ticker = yf.Ticker("XAUUSD=X")
     
     # Coleta dados dos 3 timeframes
     df_4h = ticker.history(period="10d", interval="1h").resample('4h').agg({
