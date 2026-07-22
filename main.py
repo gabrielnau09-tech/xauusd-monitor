@@ -13,107 +13,71 @@ TG_ID = os.getenv("TELEGRAM_CHAT_ID")
 client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=API_KEY)
 
 # =============================================================================
-# 🎯 SUPER PROMPT - ROBÔ TRADER CIRÚRGICO
-# Baseado em: Murphy, Elder, Livermore, Elliott Wave, Price Action
+# 🎯 SUPER PROMPT - FORMATO HÍBRIDO (Direto + Técnico)
 # =============================================================================
-PROMPT = """Você é o ROBÔ TRADER CIRÚRGICO, um analista técnico de elite especializado em Day Trade e Swing Trade.
+PROMPT = """Você é o ROBÔ TRADER CIRÚRGICO, analista técnico de elite.
 
-📚 CONHECIMENTO INCORPORADO:
-- John Murphy: Análise Técnica clássica, padrões de reversão/continuação, volume
-- Alexander Elder: Sistema dos 3 Telões, gestão de risco, psicologia (3M's)
-- Jesse Livermore: Pontos Pivô, paciência estratégica, piramidação
-- Elliott Wave: Ondas impulsivas (5) e corretivas (3), Fibonacci
-- Price Action: Barras Elefante, estrutura de mercado, pullbacks
+ CONHECIMENTO: Murphy, Elder, Livermore, Elliott Wave, Price Action
 
- REGRA DE OURO (INQUEBRÁVEL):
-**NUNCA OPERE CONTRA A TENDÊNCIA MACRO (4H/Diário)**
-Esta regra sobrescreve todas as outras. Só opere a favor da tendência dominante.
+ REGRA DE OURO: NUNCA OPERE CONTRA A TENDÊNCIA MACRO (4H)
 
-📊 ANÁLISE OBRIGATÓRIA MULTI-TIMEFRAME:
-
-1️⃣ TENDÊNCIA MACRO (4H/Diário):
-   - Identifique: HH/HL (alta) ou LH/LL (baixa)
-   - Preço acima/abaixo das médias móveis?
-   - Use Teoria de Dow: tendência primária
-   - DECISÃO: Só opere NESTA direção
-
-2️ ESTRUTURA INTERMEDIÁRIA (1H):
-   - Pullback em região de valor?
-   - Suporte/resistência, Fibonacci (38.2%, 50%, 61.8%)
-   - EMA 20/50 como suporte dinâmico
-   - Osciladores (RSI, MACD) em sobrevenda/sobrecompra?
-
-3️⃣ GATILHO DE ENTRADA (15min):
-   - Barra Elefante de Ignição (corpo 70%+, pouco pavio)
-   - Padrões: Martelo, Engolfo, Rompimento com volume
-   - Volume deve confirmar o movimento
-   - Confluência mínima de 3 fatores
-
-⚡ CRITÉRIOS DE ENTRADA CIRÚRGICA:
+📊 ANÁLISE OBRIGATÓRIA:
+1. Tendência 4H: HH/HL (alta) ou LH/LL (baixa)
+2. Setup 1H: Pullback em região de valor (EMA, Fib, Suporte/Resistência)
+3. Gatilho 15min: Barra Elefante, Martelo, Engolfo com volume
+4. Confluência: Mínimo 3 fatores alinhados
 
 ✅ SÓ ENTRE SE:
-1. Tendência 4H clara (HH/HL ou LH/LL)
-2. Pullback em região de valor (suporte, Fib, média)
-3. Gatilho 15min com barra elefante ou padrão confirmado
-4. Volume acima da média no gatilho
-5. R/R mínimo 1:2
-6. Confluência de 3+ fatores alinhados
+- Tendência 4H clara
+- Pullback em região de valor
+- Gatilho 15min confirmado
+- R/R mínimo 1:2
+- Volume confirmando
 
-❌ NUNCA ENTRE SE:
-- Mercado lateralizado/consolidação
-- Contra a tendência 4H
-- Sem gatilho claro (apenas "achismo")
-- R/R menor que 1:2
-- Volume fraco/baixo
+ NUNCA ENTRE SE:
+- Mercado lateralizado
+- Contra tendência 4H
+- Sem gatilho claro
+- R/R < 1:2
 
- FORMATO DE SAÍDA OBRIGATÓRIO:
+📝 FORMATO DE SAÍDA OBRIGATÓRIO (use EXATAMENTE este formato):
 
-### 📊 RELATÓRIO XAU/USD - ROBÔ CIRÚRGICO
-**💰 Preço Atual:** ${current_price:.2f}
-**🕒 Timestamp:** {current_time}
+🚨 ALERTA CIRÚRGICO XAU/USD
+💰 Preço Atual: ${current_price:.2f}
+ {current_time}
 
-**📈 TENDÊNCIA MACRO (4H):** [Alta/Baixa/Neutra]
-- Estrutura: [HH/HL ou LH/LL]
-- Posição vs Médias: [Acima/Abaixo]
-- **DIREÇÃO PERMITIDA:** [SÓ COMPRA / SÓ VENDA / AGUARDAR]
+📊 ANÁLISE MULTI-TIMEFRAME:
+• Tendência 4H: [ALTA/BAIXA/NEUTRA] ([HH/HL ou LH/LL])
+• Setup 1H: [Descrição do pullback/região de valor]
+• Gatilho 15min: [Padrão + Volume]
 
-**🔍 SETUP 1H:**
-- Região: [Suporte/Resistência/Fib/EMA]
-- Pullback: [Sim/Não]
-- Osciladores: [RSI/MACD - condição]
+⚖️ CONFLUÊNCIA: [X/6 fatores] [✅/❌]
 
-**⚡ GATILHO 15min:**
-- Padrão: [Barra Elefante/Martelo/Engolfo/Rompimento]
-- Volume: [Alto/Médio/Baixo]
-- Confirmação: [Sim/Não]
+━━━━━━━━━━━━━━━━━━━━
+🎯 DECISÃO: [✅ ENTRADA VALIDADA - COMPRA/VENDA] OU [⛔ AGUARDAR]
+━━━━━━━━━━━━━━━━━━━━
 
-**⚖️ CONFLUÊNCIA:** [X/6 fatores] ✅/❌
-- [ ] Tendência 4H definida
-- [ ] Pullback em região de valor
-- [ ] Gatilho 15min claro
-- [ ] Volume confirmando
-- [ ] R/R >= 1:2
-- [ ] Alinhamento multi-timeframe
+[Se ✅ ENTRADA VALIDADA, preencha:]
+💰 ENTRADA: $[preço] ([justificativa técnica])
+🛑 STOP LOSS: $[preço] ([justificativa - suporte/resistência/EMA])
+ TAKE PROFIT: $[preço] ([justificativa - resistência/suporte/projeção])
+📊 R/R: 1:[X.X]
+💵 APORTE: [X.X]% do capital
+🎲 PROBABILIDADE: [X]%
 
- DECISÃO FINAL:
-[✅ ENTRADA VALIDADA - COMPRA]
-[✅ ENTRADA VALIDADA - VENDA]
-[⛔ AGUARDAR - Sem setup válido]
+📚 MOTIVO: [Explicação técnica baseada em Murphy/Elder/Livermore/Elliott - cite qual autor/regra fundamentou]
 
-📝 DETALHES TÉCNICOS (Apenas se ✅):
-- Direção: [Compra/Venda]
-- Entrada: $[preço]
-- Stop Loss: $[preço] (baseado em [suporte/resistência/EMA])
-- Take Profit: $[preço] (R/R 1:[X])
-- Aporte: [2% máximo do capital]
-- Probabilidade: [X]% (baseado em [Murphy/Elder/Livermore])
-- Estratégia: [Tendência+Pullback/Rompimento/Reversão]
+⚠️ GESTÃO:
+• Mover stop para breakeven em +1R
+• [Outras recomendações de gestão]
 
-⚠️ MOTIVO DA ESPERA (Apenas se ⛔):
-- [Explique tecnicamente o que falta, ex: "Aguardando pullback até $4080", "Sem confluência - mercado lateralizado", "Gatilho 15min fraco - volume baixo"]
+[Se ⛔ AGUARDAR, preencha:]
+⚠️ MOTIVO DA ESPERA: [Explique o que falta para o setup ser válido]
 
-💡 PRINCÍPIO APLICADO:
-- [Cite qual autor/regra fundamentou a decisão, ex: "Elder - Sistema Triple Screen", "Livermore - Ponto Pivô", "Murphy - Triângulo Simétrico", "Regra de Ouro - A favor da tendência"]
+━━━━━━━━━━━━━━━━━━━━
+🔹 Robô Trader Cirúrgico
+Baseado em: Murphy, Elder, Livermore, Elliott
+━━━━━━━━━━━━━━━━━━━━
 """
 
 def get_market_data():
@@ -139,7 +103,6 @@ def get_market_data():
         recent_highs = df_4h['High'].tail(4).values
         recent_lows = df_4h['Low'].tail(4).values
         
-        # HH/HL = Alta, LH/LL = Baixa
         if recent_highs[-1] > recent_highs[-2] and recent_lows[-1] > recent_lows[-2]:
             trend_4h = "ALTA (HH/HL)"
             allowed_direction = "SÓ COMPRA"
@@ -153,6 +116,10 @@ def get_market_data():
         trend_4h = "INDEFINIDA"
         allowed_direction = "AGUARDAR"
     
+    # Calcular EMAs
+    ema_20_4h = df_4h['Close'].tail(20).mean()
+    ema_50_4h = df_4h['Close'].tail(50).mean() if len(df_4h) >= 50 else None
+    
     cols = ['Open', 'High', 'Low', 'Close', 'Volume']
     
     data = f"""PREÇO ATUAL: ${current_price:.2f}
@@ -160,30 +127,26 @@ def get_market_data():
 📈 TENDÊNCIA 4H: {trend_4h}
 DIREÇÃO PERMITIDA: {allowed_direction}
 
---- DADOS 4H (Macro) ---
+EMAs 4H:
+- EMA 20: ${ema_20_4h:.2f}
+- EMA 50: ${ema_50_4h:.2f} if ema_50_4h else 'N/A'
+
+--- DADOS 4H (Macro - últimos 12 candles) ---
 {df_4h[cols].tail(12).to_string(index=False)}
 
---- DADOS 1H (Setup) ---
+--- DADOS 1H (Setup - últimos 20 candles) ---
 {df_1h[cols].tail(20).to_string(index=False)}
 
---- DADOS 15min (Gatilho) ---
-{df_15m[cols].tail(30).to_string(index=False)}
-
-MÉDIAS 4H:
-- EMA 20: ${df_4h['Close'].tail(20).mean():.2f}
-- EMA 50: ${df_4h['Close'].tail(50).mean():.2f} if len(df_4h) >= 50 else 'N/A'
-
-RSI 14 (1H): Calcular baseado nos últimos 14 períodos
-MACD (1H): Calcular baseado em EMA 12-26-9"""
+--- DADOS 15min (Gatilho - últimos 30 candles) ---
+{df_15m[cols].tail(30).to_string(index=False)}"""
     
     return data, current_price, trend_4h, allowed_direction
 
 def analyze_with_ai(market_data, current_price):
     """Chama a IA com o super prompt."""
-    # Formatar timestamp
     current_time = datetime.utcnow().strftime('%d/%m/%Y %H:%M UTC')
     
-    # Substituir placeholders no prompt
+    # Substituir placeholders
     formatted_prompt = PROMPT.replace("{current_price:.2f}", f"{current_price:.2f}")
     formatted_prompt = formatted_prompt.replace("{current_time}", current_time)
     
@@ -192,10 +155,10 @@ def analyze_with_ai(market_data, current_price):
             model="qwen/qwen-2.5-7b-instruct",
             messages=[
                 {"role": "system", "content": formatted_prompt},
-                {"role": "user", "content": f"Analise o mercado de XAU/USD com base nestes dados:\n\n{market_data}"}
+                {"role": "user", "content": f"Analise o mercado de XAU/USD:\n\n{market_data}"}
             ],
             temperature=0.1,
-            max_tokens=1000
+            max_tokens=1200
         )
         
         return response.choices[0].message.content
@@ -231,10 +194,10 @@ def run():
     
     print(f"💰 Preço Atual: ${current_price:.2f}")
     print(f"📈 Tendência 4H: {trend_4h}")
-    print(f"🎯 Direção Permitida: {allowed_direction}")
+    print(f" Direção Permitida: {allowed_direction}")
     
     # Analisar com IA
-    print("\n🧠 Analisando com IA...")
+    print("\n Analisando com IA...")
     analysis = analyze_with_ai(market_data, current_price)
     
     # Imprimir análise completa
@@ -244,17 +207,15 @@ def run():
     
     # Verificar se há setup válido
     if "✅ ENTRADA VALIDADA" in analysis:
-        # Montar mensagem para Telegram
+        # Montar mensagem para Telegram (já formatada pela IA)
         current_time = datetime.utcnow().strftime('%d/%m/%Y %H:%M UTC')
+        
+        # Adicionar header com preço atual
         mensagem = f"""🚨 *ALERTA CIRÚRGICO XAU/USD*
- *Preço:* ${current_price:.2f}
+💰 *Preço:* ${current_price:.2f}
 ⏰ {current_time}
 
-{analysis}
-
----
-🔹 *Robô Trader Cirúrgico*
-Baseado em: Murphy, Elder, Livermore, Elliott"""
+{analysis}"""
         
         # Enviar Telegram
         if send_telegram_alert(mensagem):
