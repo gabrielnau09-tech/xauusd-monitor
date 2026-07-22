@@ -2,7 +2,7 @@ import yfinance as yf
 import pandas as pd
 import requests
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from openai import OpenAI
 
 # Configurações (lidas dos Secrets do GitHub)
@@ -40,9 +40,9 @@ PROMPT = """Você é o ROBÔ TRADER CIRÚRGICO, analista técnico de elite.
 - Sem gatilho claro
 - R/R < 1:2
 
-📝 FORMATO DE SAÍDA OBRIGATÓRIO (use EXATAMENTE este formato):
+ FORMATO DE SAÍDA OBRIGATÓRIO (use EXATAMENTE este formato):
 
-🚨 ALERTA CIRÚRGICO XAU/USD
+ ALERTA CIRÚRGICO XAU/USD
 💰 Preço Atual: ${current_price:.2f}
 ⏰ {current_time}
 
@@ -54,7 +54,7 @@ PROMPT = """Você é o ROBÔ TRADER CIRÚRGICO, analista técnico de elite.
 ⚖️ CONFLUÊNCIA: [X/6 fatores] [✅/❌]
 
 ━━━━━━━━━━━━━━━━━━━━
-🎯 DECISÃO: [✅ ENTRADA VALIDADA - COMPRA/VENDA] OU [⛔ AGUARDAR]
+ DECISÃO: [✅ ENTRADA VALIDADA - COMPRA/VENDA] OU [⛔ AGUARDAR]
 ━━━━━━━━━━━━━━━━━━━━
 
 [Se ✅ ENTRADA VALIDADA, preencha:]
@@ -81,40 +81,66 @@ Baseado em: Murphy, Elder, Livermore, Elliott
 """
 
 def get_market_data():
-    """Coleta dados completos dos 3 timeframes com tratamento de erro."""
+    """Coleta dados completos dos 3 timeframes com tratamento robusto de erro."""
     try:
         ticker = yf.Ticker("GC=F")
+        current_price = None
         
-        # Tentar obter preço atual
-        try:
-            current_price_data = ticker.history(period="1d", interval="1m")
-            if current_price_data.empty:
-                print("⚠️ Aviso: Dados de 1m vazios, tentando 5m...")
-                current_price_data = ticker.history(period="1d", interval="5m")
-            
-            if current_price_data.empty:
-                print("❌ Erro: Sem dados de preço disponíveis")
-                return None, None, None, None
-            
-            current_price = float(current_price_data['Close'].iloc[-1])
-        except Exception as e:
-            print(f"❌ Erro ao obter preço atual: {e}")
+        # Tentar obter preço atual com múltiplas tentativas
+        intervals_to_try = ["1m", "5m", "15m", "1h"]
+        
+        for interval in intervals_to_try:
+            try:
+                print(f"🔄 Tentando obter preço com intervalo {interval}...")
+                data = ticker.history(period="1d", interval=interval)
+                
+                if not data.empty and 'Close' in data.columns and len(data) > 0:
+                    current_price = float(data['Close'].iloc[-1])
+                    print(f"✅ Preço obtido com sucesso ({interval}): ${current_price:.2f}")
+                    break
+            except Exception as e:
+                print(f"⚠️ Falha no intervalo {interval}: {e}")
+                continue
+        
+        # Se ainda não conseguiu preço, tentar com período maior
+        if current_price is None:
+            print("⚠️ Tentando com período de 5 dias...")
+            try:
+                data = ticker.history(period="5d", interval="1h")
+                if not data.empty and 'Close' in data.columns and len(data) > 0:
+                    current_price = float(data['Close'].iloc[-1])
+                    print(f"✅ Preço obtido com período estendido: ${current_price:.2f}")
+            except Exception as e:
+                print(f" Falha também com período estendido: {e}")
+        
+        # Verificação final
+        if current_price is None:
+            print(" ERRO: Não foi possível obter preço de mercado após múltiplas tentativas")
             return None, None, None, None
         
-        # 4H - Tendência Macro
-        df_4h = ticker.history(period="60d", interval="1h").resample('4h').agg({
-            'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
-        }).dropna().tail(30)
-        
-        # 1H - Estrutura Intermediária
-        df_1h = ticker.history(period="10d", interval="1h").tail(50)
-        
-        # 15min - Gatilho de Entrada
-        df_15m = ticker.history(period="3d", interval="15m").tail(60)
-        
-        # Verificar se temos dados suficientes
-        if df_4h.empty or df_1h.empty or df_15m.empty:
-            print("❌ Erro: Dados insuficientes para análise")
+        # Coletar dados dos timeframes
+        try:
+            # 4H - Tendência Macro
+            df_4h = ticker.history(period="60d", interval="1h").resample('4h').agg({
+                'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
+            }).dropna().tail(30)
+            
+            # 1H - Estrutura Intermediária
+            df_1h = ticker.history(period="10d", interval="1h").tail(50)
+            
+            # 15min - Gatilho de Entrada
+            df_15m = ticker.history(period="3d", interval="15m").tail(60)
+            
+            # Verificar se temos dados suficientes
+            if df_4h.empty or df_1h.empty or df_15m.empty:
+                print("❌ ERRO: Dados insuficientes para análise")
+                print(f"  - df_4h: {len(df_4h)} registros")
+                print(f"  - df_1h: {len(df_1h)} registros")
+                print(f"  - df_15m: {len(df_15m)} registros")
+                return None, None, None, None
+            
+        except Exception as e:
+            print(f"❌ Erro ao coletar dados dos timeframes: {e}")
             return None, None, None, None
         
         # Identificar tendência 4H
@@ -162,7 +188,9 @@ EMAs 4H:
         return data, current_price, trend_4h, allowed_direction
         
     except Exception as e:
-        print(f"❌ Erro crítico em get_market_data: {e}")
+        print(f" Erro crítico em get_market_data: {e}")
+        import traceback
+        traceback.print_exc()
         return None, None, None, None
 
 def analyze_with_ai(market_data, current_price):
@@ -215,21 +243,28 @@ def run():
     print(f"\n{'='*60}")
     print(f"🤖 ROBÔ TRADER CIRÚRGICO - Análise Iniciada")
     print(f"{'='*60}")
+    print(f"⏰ Horário UTC: {datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S')}")
     
     # Coletar dados
     market_data, current_price, trend_4h, allowed_direction = get_market_data()
     
     # Verificar se houve erro na coleta
     if market_data is None or current_price is None:
+        print("\n" + "="*60)
         print("❌ FALHA CRÍTICA: Não foi possível coletar dados de mercado")
-        print("Possíveis causas:")
+        print("="*60)
+        print("\nPossíveis causas:")
         print("  1. Mercado fechado (fim de semana/feriado)")
         print("  2. Problema de conexão com Yahoo Finance")
-        print("  3. Ticker GC=F indisponível")
+        print("  3. Ticker GC=F indisponível temporariamente")
+        print("\n Soluções:")
+        print("  - Aguarde a próxima execução (15 minutos)")
+        print("  - Verifique se é dia útil e horário de mercado")
+        print("  - O mercado de ouro (GC=F) opera 23h/dia, fecha 1h")
         print("\n⏳ Aguardando próxima execução...")
         return
     
-    print(f"💰 Preço Atual: ${current_price:.2f}")
+    print(f"\n💰 Preço Atual: ${current_price:.2f}")
     print(f"📈 Tendência 4H: {trend_4h}")
     print(f"🎯 Direção Permitida: {allowed_direction}")
     
