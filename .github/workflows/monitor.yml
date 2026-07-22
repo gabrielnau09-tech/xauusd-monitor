@@ -2,8 +2,7 @@ name: XAUUSD AI Monitor
 
 on:
   schedule:
-    # Roda a cada 15 minutos (UTC)
-    # Formato: minuto hora dia-mes mes dia-semana
+    # Roda a cada 15 minutos (minutos 0, 15, 30, 45 de cada hora)
     - cron: '*/15 * * * *'
   workflow_dispatch:  # Permite execução manual
 
@@ -31,4 +30,3 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
-
