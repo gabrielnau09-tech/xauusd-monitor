@@ -40,9 +40,9 @@ PROMPT = """Você é o ROBÔ TRADER CIRÚRGICO, analista técnico de elite.
 - Sem gatilho claro
 - R/R < 1:2
 
- FORMATO DE SAÍDA OBRIGATÓRIO (use EXATAMENTE este formato):
+📝 FORMATO DE SAÍDA OBRIGATÓRIO (use EXATAMENTE este formato):
 
- ALERTA CIRÚRGICO XAU/USD
+🚨 ALERTA CIRÚRGICO XAU/USD
 💰 Preço Atual: ${current_price:.2f}
 ⏰ {current_time}
 
@@ -54,7 +54,7 @@ PROMPT = """Você é o ROBÔ TRADER CIRÚRGICO, analista técnico de elite.
 ⚖️ CONFLUÊNCIA: [X/6 fatores] [✅/❌]
 
 ━━━━━━━━━━━━━━━━━━━━
- DECISÃO: [✅ ENTRADA VALIDADA - COMPRA/VENDA] OU [⛔ AGUARDAR]
+🎯 DECISÃO: [✅ ENTRADA VALIDADA - COMPRA/VENDA] OU [⛔ AGUARDAR]
 ━━━━━━━━━━━━━━━━━━━━
 
 [Se ✅ ENTRADA VALIDADA, preencha:]
@@ -99,23 +99,23 @@ def get_market_data():
                     print(f"✅ Preço obtido com sucesso ({interval}): ${current_price:.2f}")
                     break
             except Exception as e:
-                print(f"⚠️ Falha no intervalo {interval}: {e}")
+                print(f"️ Falha no intervalo {interval}: {e}")
                 continue
         
         # Se ainda não conseguiu preço, tentar com período maior
         if current_price is None:
-            print("⚠️ Tentando com período de 5 dias...")
+            print("️ Tentando com período de 5 dias...")
             try:
                 data = ticker.history(period="5d", interval="1h")
                 if not data.empty and 'Close' in data.columns and len(data) > 0:
                     current_price = float(data['Close'].iloc[-1])
                     print(f"✅ Preço obtido com período estendido: ${current_price:.2f}")
             except Exception as e:
-                print(f" Falha também com período estendido: {e}")
+                print(f"❌ Falha também com período estendido: {e}")
         
         # Verificação final
         if current_price is None:
-            print(" ERRO: Não foi possível obter preço de mercado após múltiplas tentativas")
+            print("❌ ERRO: Não foi possível obter preço de mercado após múltiplas tentativas")
             return None, None, None, None
         
         # Coletar dados dos timeframes
@@ -161,9 +161,13 @@ def get_market_data():
             trend_4h = "INDEFINIDA"
             allowed_direction = "AGUARDAR"
         
-        # Calcular EMAs
+        # Calcular EMAs com tratamento de erro
         ema_20_4h = df_4h['Close'].tail(20).mean()
         ema_50_4h = df_4h['Close'].tail(50).mean() if len(df_4h) >= 50 else None
+        
+        # Formatar EMAs corretamente (tratando None)
+        ema_20_str = f"${ema_20_4h:.2f}"
+        ema_50_str = f"${ema_50_4h:.2f}" if ema_50_4h is not None else "N/A"
         
         cols = ['Open', 'High', 'Low', 'Close', 'Volume']
         
@@ -173,8 +177,8 @@ def get_market_data():
 DIREÇÃO PERMITIDA: {allowed_direction}
 
 EMAs 4H:
-- EMA 20: ${ema_20_4h:.2f}
-- EMA 50: ${ema_50_4h:.2f} if ema_50_4h else 'N/A'
+- EMA 20: {ema_20_str}
+- EMA 50: {ema_50_str}
 
 --- DADOS 4H (Macro - últimos 12 candles) ---
 {df_4h[cols].tail(12).to_string(index=False)}
@@ -188,7 +192,7 @@ EMAs 4H:
         return data, current_price, trend_4h, allowed_direction
         
     except Exception as e:
-        print(f" Erro crítico em get_market_data: {e}")
+        print(f"❌ Erro crítico em get_market_data: {e}")
         import traceback
         traceback.print_exc()
         return None, None, None, None
@@ -257,7 +261,7 @@ def run():
         print("  1. Mercado fechado (fim de semana/feriado)")
         print("  2. Problema de conexão com Yahoo Finance")
         print("  3. Ticker GC=F indisponível temporariamente")
-        print("\n Soluções:")
+        print("\n🔧 Soluções:")
         print("  - Aguarde a próxima execução (15 minutos)")
         print("  - Verifique se é dia útil e horário de mercado")
         print("  - O mercado de ouro (GC=F) opera 23h/dia, fecha 1h")
