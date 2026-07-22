@@ -17,9 +17,9 @@ client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=API_KEY)
 # =============================================================================
 PROMPT = """Você é o ROBÔ TRADER CIRÚRGICO, analista técnico de elite.
 
- CONHECIMENTO: Murphy, Elder, Livermore, Elliott Wave, Price Action
+📚 CONHECIMENTO: Murphy, Elder, Livermore, Elliott Wave, Price Action
 
- REGRA DE OURO: NUNCA OPERE CONTRA A TENDÊNCIA MACRO (4H)
+📜 REGRA DE OURO: NUNCA OPERE CONTRA A TENDÊNCIA MACRO (4H)
 
 📊 ANÁLISE OBRIGATÓRIA:
 1. Tendência 4H: HH/HL (alta) ou LH/LL (baixa)
@@ -34,7 +34,7 @@ PROMPT = """Você é o ROBÔ TRADER CIRÚRGICO, analista técnico de elite.
 - R/R mínimo 1:2
 - Volume confirmando
 
- NUNCA ENTRE SE:
+❌ NUNCA ENTRE SE:
 - Mercado lateralizado
 - Contra tendência 4H
 - Sem gatilho claro
@@ -44,7 +44,7 @@ PROMPT = """Você é o ROBÔ TRADER CIRÚRGICO, analista técnico de elite.
 
 🚨 ALERTA CIRÚRGICO XAU/USD
 💰 Preço Atual: ${current_price:.2f}
- {current_time}
+⏰ {current_time}
 
 📊 ANÁLISE MULTI-TIMEFRAME:
 • Tendência 4H: [ALTA/BAIXA/NEUTRA] ([HH/HL ou LH/LL])
@@ -60,7 +60,7 @@ PROMPT = """Você é o ROBÔ TRADER CIRÚRGICO, analista técnico de elite.
 [Se ✅ ENTRADA VALIDADA, preencha:]
 💰 ENTRADA: $[preço] ([justificativa técnica])
 🛑 STOP LOSS: $[preço] ([justificativa - suporte/resistência/EMA])
- TAKE PROFIT: $[preço] ([justificativa - resistência/suporte/projeção])
+🎯 TAKE PROFIT: $[preço] ([justificativa - resistência/suporte/projeção])
 📊 R/R: 1:[X.X]
 💵 APORTE: [X.X]% do capital
 🎲 PROBABILIDADE: [X]%
@@ -81,48 +81,67 @@ Baseado em: Murphy, Elder, Livermore, Elliott
 """
 
 def get_market_data():
-    """Coleta dados completos dos 3 timeframes."""
-    ticker = yf.Ticker("GC=F")
-    
-    # 4H - Tendência Macro
-    df_4h = ticker.history(period="60d", interval="1h").resample('4h').agg({
-        'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
-    }).dropna().tail(30)
-    
-    # 1H - Estrutura Intermediária
-    df_1h = ticker.history(period="10d", interval="1h").tail(50)
-    
-    # 15min - Gatilho de Entrada
-    df_15m = ticker.history(period="3d", interval="15m").tail(60)
-    
-    # Preço atual
-    current_price = ticker.history(period="1d", interval="1m")['Close'].iloc[-1]
-    
-    # Identificar tendência 4H
-    if len(df_4h) >= 4:
-        recent_highs = df_4h['High'].tail(4).values
-        recent_lows = df_4h['Low'].tail(4).values
+    """Coleta dados completos dos 3 timeframes com tratamento de erro."""
+    try:
+        ticker = yf.Ticker("GC=F")
         
-        if recent_highs[-1] > recent_highs[-2] and recent_lows[-1] > recent_lows[-2]:
-            trend_4h = "ALTA (HH/HL)"
-            allowed_direction = "SÓ COMPRA"
-        elif recent_highs[-1] < recent_highs[-2] and recent_lows[-1] < recent_lows[-2]:
-            trend_4h = "BAIXA (LH/LL)"
-            allowed_direction = "SÓ VENDA"
+        # Tentar obter preço atual
+        try:
+            current_price_data = ticker.history(period="1d", interval="1m")
+            if current_price_data.empty:
+                print("⚠️ Aviso: Dados de 1m vazios, tentando 5m...")
+                current_price_data = ticker.history(period="1d", interval="5m")
+            
+            if current_price_data.empty:
+                print("❌ Erro: Sem dados de preço disponíveis")
+                return None, None, None, None
+            
+            current_price = float(current_price_data['Close'].iloc[-1])
+        except Exception as e:
+            print(f"❌ Erro ao obter preço atual: {e}")
+            return None, None, None, None
+        
+        # 4H - Tendência Macro
+        df_4h = ticker.history(period="60d", interval="1h").resample('4h').agg({
+            'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
+        }).dropna().tail(30)
+        
+        # 1H - Estrutura Intermediária
+        df_1h = ticker.history(period="10d", interval="1h").tail(50)
+        
+        # 15min - Gatilho de Entrada
+        df_15m = ticker.history(period="3d", interval="15m").tail(60)
+        
+        # Verificar se temos dados suficientes
+        if df_4h.empty or df_1h.empty or df_15m.empty:
+            print("❌ Erro: Dados insuficientes para análise")
+            return None, None, None, None
+        
+        # Identificar tendência 4H
+        if len(df_4h) >= 4:
+            recent_highs = df_4h['High'].tail(4).values
+            recent_lows = df_4h['Low'].tail(4).values
+            
+            if recent_highs[-1] > recent_highs[-2] and recent_lows[-1] > recent_lows[-2]:
+                trend_4h = "ALTA (HH/HL)"
+                allowed_direction = "SÓ COMPRA"
+            elif recent_highs[-1] < recent_highs[-2] and recent_lows[-1] < recent_lows[-2]:
+                trend_4h = "BAIXA (LH/LL)"
+                allowed_direction = "SÓ VENDA"
+            else:
+                trend_4h = "NEUTRA/LATERAL"
+                allowed_direction = "AGUARDAR"
         else:
-            trend_4h = "NEUTRA/LATERAL"
+            trend_4h = "INDEFINIDA"
             allowed_direction = "AGUARDAR"
-    else:
-        trend_4h = "INDEFINIDA"
-        allowed_direction = "AGUARDAR"
-    
-    # Calcular EMAs
-    ema_20_4h = df_4h['Close'].tail(20).mean()
-    ema_50_4h = df_4h['Close'].tail(50).mean() if len(df_4h) >= 50 else None
-    
-    cols = ['Open', 'High', 'Low', 'Close', 'Volume']
-    
-    data = f"""PREÇO ATUAL: ${current_price:.2f}
+        
+        # Calcular EMAs
+        ema_20_4h = df_4h['Close'].tail(20).mean()
+        ema_50_4h = df_4h['Close'].tail(50).mean() if len(df_4h) >= 50 else None
+        
+        cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+        
+        data = f"""PREÇO ATUAL: ${current_price:.2f}
 
 📈 TENDÊNCIA 4H: {trend_4h}
 DIREÇÃO PERMITIDA: {allowed_direction}
@@ -139,11 +158,18 @@ EMAs 4H:
 
 --- DADOS 15min (Gatilho - últimos 30 candles) ---
 {df_15m[cols].tail(30).to_string(index=False)}"""
-    
-    return data, current_price, trend_4h, allowed_direction
+        
+        return data, current_price, trend_4h, allowed_direction
+        
+    except Exception as e:
+        print(f"❌ Erro crítico em get_market_data: {e}")
+        return None, None, None, None
 
 def analyze_with_ai(market_data, current_price):
     """Chama a IA com o super prompt."""
+    if market_data is None or current_price is None:
+        return "⛔ ERRO: Dados de mercado indisponíveis. Aguardar próxima análise."
+    
     current_time = datetime.utcnow().strftime('%d/%m/%Y %H:%M UTC')
     
     # Substituir placeholders
@@ -158,7 +184,8 @@ def analyze_with_ai(market_data, current_price):
                 {"role": "user", "content": f"Analise o mercado de XAU/USD:\n\n{market_data}"}
             ],
             temperature=0.1,
-            max_tokens=1200
+            max_tokens=1200,
+            timeout=30
         )
         
         return response.choices[0].message.content
@@ -192,12 +219,22 @@ def run():
     # Coletar dados
     market_data, current_price, trend_4h, allowed_direction = get_market_data()
     
+    # Verificar se houve erro na coleta
+    if market_data is None or current_price is None:
+        print("❌ FALHA CRÍTICA: Não foi possível coletar dados de mercado")
+        print("Possíveis causas:")
+        print("  1. Mercado fechado (fim de semana/feriado)")
+        print("  2. Problema de conexão com Yahoo Finance")
+        print("  3. Ticker GC=F indisponível")
+        print("\n⏳ Aguardando próxima execução...")
+        return
+    
     print(f"💰 Preço Atual: ${current_price:.2f}")
     print(f"📈 Tendência 4H: {trend_4h}")
-    print(f" Direção Permitida: {allowed_direction}")
+    print(f"🎯 Direção Permitida: {allowed_direction}")
     
     # Analisar com IA
-    print("\n Analisando com IA...")
+    print("\n🧠 Analisando com IA...")
     analysis = analyze_with_ai(market_data, current_price)
     
     # Imprimir análise completa
