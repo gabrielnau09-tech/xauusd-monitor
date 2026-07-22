@@ -2,13 +2,15 @@ name: XAUUSD AI Monitor
 
 on:
   schedule:
-    # Roda a cada 15 minutos, de segunda a sexta, das 08:00 às 20:00 UTC
-    - cron: '*/15 8-20 * * 1-5'
-  workflow_dispatch: # Permite rodar manualmente
+    # Roda a cada 15 minutos (UTC)
+    # Formato: minuto hora dia-mes mes dia-semana
+    - cron: '*/15 * * * *'
+  workflow_dispatch:  # Permite execução manual
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -29,3 +31,4 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
+
