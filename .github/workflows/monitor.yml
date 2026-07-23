@@ -2,8 +2,15 @@ name: XAUUSD AI Monitor
 
 on:
   schedule:
-    # Roda a cada 15 minutos (minutos 0, 15, 30, 45 de cada hora)
-    - cron: '*/15 * * * *'
+    # Roda a cada 15 minutos (horários fixos separados)
+    # Minuto 0 de cada hora
+    - cron: '0 * * * *'
+    # Minuto 15 de cada hora
+    - cron: '15 * * * *'
+    # Minuto 30 de cada hora
+    - cron: '30 * * * *'
+    # Minuto 45 de cada hora
+    - cron: '45 * * * *'
   workflow_dispatch:  # Permite execução manual
 
 jobs:
