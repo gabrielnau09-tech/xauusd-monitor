@@ -2,15 +2,8 @@ name: XAUUSD AI Monitor
 
 on:
   schedule:
-    # Roda a cada 15 minutos (horários fixos separados)
-    # Minuto 0 de cada hora
-    - cron: '0 * * * *'
-    # Minuto 15 de cada hora
-    - cron: '15 * * * *'
-    # Minuto 30 de cada hora
-    - cron: '30 * * * *'
-    # Minuto 45 de cada hora
-    - cron: '45 * * * *'
+    # Roda a cada 15 minutos (00, 15, 30, 45 de cada hora)
+    - cron: '*/15 * * * *'
   workflow_dispatch:  # Permite execução manual
 
 jobs:
@@ -19,12 +12,13 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4  # Atualizado para v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5  # Atualizado para v5
         with:
           python-version: '3.10'
+          cache: 'pip'  # Otimização: cache do pip
 
       - name: Install dependencies
         run: |
