@@ -2,30 +2,45 @@ name: XAUUSD AI Monitor
 
 on:
   schedule:
+    # Roda a cada 15 minutos
     - cron: '*/15 * * * *'
   workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.10'
+  PIP_VERSION: '24.0'
 
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: Set up Python
+      - name:  Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install yfinance pandas openai requests
+          python -m pip install --upgrade pip==${{ env.PIP_VERSION }}
+          pip install --no-cache-dir yfinance pandas openai requests
 
-      - name: Run AI Analysis
+      - name:  Run AI Analysis
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python main.py
+        run: |
+          echo "Iniciando análise em $(date)"
+          python main.py
+          echo "Análise completada em $(date)"
+
+      - name: ️ Handle failure
+        if: failure()
+        run: echo "Workflow falhou em $(date)"
